@@ -60,7 +60,15 @@ impl Msg {
 
             // bulk string
             Some(b'$') => {
-                todo!("decode for BulkString")
+                let len = take_till_crlf(bytes)?.parse::<i8>().ok()?;
+                if len < 0 { return Some(Null) };
+
+                str::from_utf8(
+                    & bytes
+                        .take(len as usize)
+                        .collect::<Vec<u8>>()
+                ).ok()
+                 .map(|s| BulkString(String::from(s)))
             }
 
             // error
