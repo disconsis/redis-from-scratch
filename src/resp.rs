@@ -76,7 +76,14 @@ impl Msg {
 
             // array
             Some(b'*') => {
+                let len = take_till_crlf(bytes)?.parse::<i8>().ok()?;
+                if len < 0 { return Some(Null) };
 
+                let mut parts: Vec<Msg> = Vec::with_capacity(len as usize);
+                for _ in 0..len {
+                    parts.push(Self::decode(bytes)?);
+                }
+                Some(Array(parts))
             }
 
             _ => None
