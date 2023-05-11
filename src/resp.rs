@@ -32,7 +32,7 @@ impl Msg {
                 enc
             }
 
-            _ => todo!("decode for other types")
+            _ => todo!("encode for {:?}", self)
         }
     }
 
@@ -57,7 +57,27 @@ impl Msg {
                 }
            }
 
-            _ => todo!("decode for other types")
+            // bulk string
+            Some(b'$') => {
+                todo!("decode for BulkString")
+            }
+
+            // error
+            Some(b'-') => {
+                todo!("decode for Error")
+            }
+
+            // integer
+            Some(b':') => {
+                todo!("decode for Integer")
+            }
+
+            // array
+            Some(b'*') => {
+                todo!("decode for Array")
+            }
+
+            _ => None
         }
     }
 
