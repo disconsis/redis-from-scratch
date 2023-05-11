@@ -16,9 +16,22 @@ pub enum Msg {
     Null,
 }
 
+use Msg::*;
+
 impl Msg {
     pub fn encode(&self) -> Vec<u8> {
-        todo!()
+        match self {
+            SimpleString(s) => {
+                let mut enc = Vec::with_capacity(s.len() + 3);
+                enc.push(b'+');
+                enc.extend(s.bytes());
+                enc.push(b'\r');
+                enc.push(b'\n');
+                enc
+            }
+
+            _ => todo!("decode for other types")
+        }
     }
 
     pub fn decode<I>(bytes: &mut I) -> Option<Self>
