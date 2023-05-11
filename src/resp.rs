@@ -40,12 +40,7 @@ impl Msg {
     pub fn encode(&self) -> Vec<u8> {
         match self {
             SimpleString(s) => {
-                let mut enc = Vec::with_capacity(s.len() + 3);
-                enc.push(b'+');
-                enc.extend(s.bytes());
-                enc.push(b'\r');
-                enc.push(b'\n');
-                enc
+                vec![b"+", s.as_bytes(), b"\r\n"].concat()
             }
 
             _ => todo!("encode for {:?}", self)
