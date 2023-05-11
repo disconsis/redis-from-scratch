@@ -55,8 +55,7 @@ impl Msg {
         match first {
             // simple string
             Some(b'+') => {
-                take_till_crlf(bytes)
-                    .map(|s| SimpleString(s.to_string()))
+                take_till_crlf(bytes).map(SimpleString)
             }
 
             // bulk string
