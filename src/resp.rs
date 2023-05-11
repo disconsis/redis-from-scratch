@@ -1,3 +1,5 @@
+use std::str;
+
 /// REdis Serialization Protocol (RESP) specification
 
 #[derive(Debug)]
@@ -34,10 +36,29 @@ impl Msg {
         }
     }
 
+    /// TODO maybe return `Option<Result<Msg>>` in case of decoding errors?
     pub fn decode<I>(bytes: &mut I) -> Option<Self>
         where I: Iterator<Item=u8>
     {
-        todo!()
+        let first = bytes.next();
+        match first {
+            // simple string
+            Some(b'+') => {
+                let content = str::from_utf8(
+                    & bytes
+                        .take_while(|b| *b != b'\r')
+                        .collect::<Vec<u8>>()
+                ).ok()?.to_string();
+                let end_ok = bytes.next() == Some(b'\n'); // got '\r\n', end of msg
+                if end_ok {
+                    Some(SimpleString(content))
+                } else {
+                    None
+                }
+           }
+
+            _ => todo!("decode for other types")
+        }
     }
 
     pub fn decoder<I>(bytes: I) -> Decoder<I>
