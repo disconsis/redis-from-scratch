@@ -1,11 +1,12 @@
 use std::net::TcpListener;
 
-const DEFAULT_PORT: u16 = 6379;
+const DEFAULT_ADDR: &str = "127.0.0.1:6379";
 
 fn main() {
     let listener = TcpListener
-        ::bind(("127.0.0.1", DEFAULT_PORT))
+        ::bind(DEFAULT_ADDR)
         .expect("creating tcp listener");
+    println!("[*] started listening on {}", DEFAULT_ADDR);
 
     for stream in listener.incoming() {
         match stream {
