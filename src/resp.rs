@@ -20,6 +20,22 @@ pub enum Msg {
 
 use Msg::*;
 
+/// read from the iterator till (and including) the next
+/// CRLF, returning string preceding it
+fn take_till_crlf<I>(bytes: &mut I) -> Option<&str>
+    where I: Iterator<Item=u8>
+{
+    let content = str::from_utf8(
+        & bytes
+            .take_while(|b| *b != b'\r')
+            .collect::<Vec<u8>>()
+    ).ok();
+    let end_ok = bytes.next() == Some(b'\n'); // got '\r\n', end of msg
+    if ! end_ok { return None };
+    content
+}
+
+
 impl Msg {
     pub fn encode(&self) -> Vec<u8> {
         match self {
@@ -44,18 +60,9 @@ impl Msg {
         match first {
             // simple string
             Some(b'+') => {
-                let content = str::from_utf8(
-                    & bytes
-                        .take_while(|b| *b != b'\r')
-                        .collect::<Vec<u8>>()
-                ).ok()?.to_string();
-                let end_ok = bytes.next() == Some(b'\n'); // got '\r\n', end of msg
-                if end_ok {
-                    Some(SimpleString(content))
-                } else {
-                    None
-                }
-           }
+                take_till_crlf(bytes)
+                    .map(|s| SimpleString(s.to_string()))
+            }
 
             // bulk string
             Some(b'$') => {
@@ -74,7 +81,7 @@ impl Msg {
 
             // array
             Some(b'*') => {
-                todo!("decode for Array")
+
             }
 
             _ => None
