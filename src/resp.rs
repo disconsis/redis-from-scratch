@@ -22,14 +22,14 @@ use Msg::*;
 
 /// read from the iterator till (and including) the next
 /// CRLF, returning string preceding it
-fn take_till_crlf<I>(bytes: &mut I) -> Option<&str>
+fn take_till_crlf<I>(bytes: &mut I) -> Option<String>
     where I: Iterator<Item=u8>
 {
     let content = str::from_utf8(
         & bytes
             .take_while(|b| *b != b'\r')
             .collect::<Vec<u8>>()
-    ).ok();
+    ).ok().map(String::from);
     let end_ok = bytes.next() == Some(b'\n'); // got '\r\n', end of msg
     if ! end_ok { return None };
     content
