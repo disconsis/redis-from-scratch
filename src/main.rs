@@ -1,16 +1,12 @@
 use std::net::{TcpListener, TcpStream};
 use std::io::{Read, Write};
 mod resp;
-use resp::Msg;
+use resp::{Msg, Msg::*};
 
 const DEFAULT_ADDR: &str = "127.0.0.1:6379";
 
-fn handle_cmd(args: &[&str]) -> Msg {
-    todo!()
-}
-
 fn handle_msg(msg: &Msg) -> Msg {
-    todo!()
+    todo!("handle msg: {msg:?}")
 }
 
 fn handle_conn(conn: TcpStream) {
@@ -26,16 +22,24 @@ fn handle_conn(conn: TcpStream) {
     for msg in Msg::decoder(conn_reader.bytes()
                             .filter_map(|i| i.ok()))
     {
-        println!("[*] {peer} --> {msg:?}");
-        let response = handle_msg(&msg);
-        let write_ok = conn_writer.write_all(& response.encode()).is_ok();
-        println!(
-            "[{}] {peer} <-- {response:?}{}",
-            if write_ok {"*"} else {"!"},
-            if write_ok {""} else {" (FAILED)"}
-        );
-        if ! write_ok {
-            break;
+        match msg {
+            Err(err) => {
+                println!("[*] Invalid msg from {peer} --> {err}")
+            }
+
+            Ok(msg) => {
+                println!("[*] {peer} --> {msg:?}");
+                let response = handle_msg(&msg);
+                let write_ok = conn_writer.write_all(& response.encode()).is_ok();
+                println!(
+                    "[{}] {peer} <-- {response:?}{}",
+                    if write_ok {"*"} else {"!"},
+                    if write_ok {""} else {" (FAILED)"}
+                );
+                if ! write_ok {
+                    break;
+                }
+            }
         }
     }
 

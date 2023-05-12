@@ -19,20 +19,21 @@ pub enum Msg {
 }
 
 use Msg::*;
+use anyhow::bail;
 
 /// read from the iterator till (and including) the next
 /// CRLF, returning string preceding it
-fn take_till_crlf<I>(bytes: &mut I) -> Option<String>
+fn take_till_crlf<I>(bytes: &mut I) -> anyhow::Result<String>
     where I: Iterator<Item=u8>
 {
     let content = str::from_utf8(
         & bytes
             .take_while(|b| *b != b'\r')
             .collect::<Vec<u8>>()
-    ).ok().map(String::from);
+    ).map(ToString::to_string);
     let end_ok = bytes.next() == Some(b'\n'); // got '\r\n', end of msg
-    if ! end_ok { return None };
-    content
+    if ! end_ok { bail!("didn't receive a '\\r\\n' at the end of the msg part") };
+    content.map_err(Into::into)
 }
 
 
@@ -47,53 +48,62 @@ impl Msg {
         }
     }
 
-    /// TODO maybe return `Option<Result<Msg>>` in case of decoding errors?
-    pub fn decode<I>(bytes: &mut I) -> Option<Self>
+    pub fn decode<I>(bytes: &mut I) -> Option<anyhow::Result<Self>>
         where I: Iterator<Item=u8>
     {
-        let first = bytes.next();
-        match first {
+        Some(Self::decode_with_first_byte(bytes.next()?, bytes))
+    }
+
+    fn decode_with_first_byte<I>(first_byte: u8, bytes: &mut I) -> anyhow::Result<Self>
+        where I: Iterator<Item=u8>
+    {
+        match first_byte {
             // simple string
-            Some(b'+') => {
+            b'+' => {
                 take_till_crlf(bytes).map(SimpleString)
             }
 
             // bulk string
-            Some(b'$') => {
-                let len = take_till_crlf(bytes)?.parse::<i8>().ok()?;
-                if len < 0 { return Some(Null) };
+            b'$' => {
+                let len = take_till_crlf(bytes)
+                    .and_then(|s| s.parse::<i8>().map_err(Into::into))?;
+                if len < 0 { return Ok(Null) };
 
                 str::from_utf8(
                     & bytes
                         .take(len as usize)
                         .collect::<Vec<u8>>()
-                ).ok()
-                 .map(|s| BulkString(String::from(s)))
+                ).map(|s| BulkString(String::from(s)))
+                 .map_err(Into::into)
             }
 
             // error
-            Some(b'-') => {
+            b'-' => {
                 todo!("decode for Error")
             }
 
             // integer
-            Some(b':') => {
+            b':' => {
                 todo!("decode for Integer")
             }
 
             // array
-            Some(b'*') => {
-                let len = take_till_crlf(bytes)?.parse::<i8>().ok()?;
-                if len < 0 { return Some(Null) };
+            b'*' => {
+                let len = take_till_crlf(bytes)?.parse::<i8>()?;
+                if len < 0 { return Ok(Null) };
 
                 let mut parts: Vec<Msg> = Vec::with_capacity(len as usize);
-                for _ in 0..len {
-                    parts.push(Self::decode(bytes)?);
+                for i in 0..len {
+                    match Self::decode(bytes) {
+                        Some(Ok(part)) => { parts.push(part); }
+                        Some(Err(err)) => { return Err(err.context(format!("reading array index {i} of {len}"))); }
+                        None => { bail!("EOF while reading array index {} of {}", i, len) }
+                    }
                 }
-                Some(Array(parts))
+                Ok(Array(parts))
             }
 
-            _ => None
+            _ => bail!("unexpected first byte '{}' in RESP encoding", first_byte)
         }
     }
 
@@ -110,7 +120,7 @@ pub struct Decoder<I>(I);
 
 impl<I> Iterator for Decoder<I> where I: Iterator<Item=u8>
 {
-    type Item = Msg;
+    type Item = anyhow::Result<Msg>;
 
     fn next(&mut self) -> Option<Self::Item> {
         Msg::decode(&mut self.0)
