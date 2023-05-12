@@ -156,12 +156,14 @@ impl Msg {
 
             // error
             b'-' => {
-                todo!("decode for Error")
+                take_till_crlf(bytes).map(Error)
             }
 
             // integer
             b':' => {
-                todo!("decode for Integer")
+                take_till_crlf(bytes)
+                    .and_then(|s| str::parse::<i64>(s.as_str()).map_err(Into::into))
+                    .map(Integer)
             }
 
             // array
