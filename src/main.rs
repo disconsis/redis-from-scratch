@@ -1,12 +1,33 @@
 use std::net::{TcpListener, TcpStream};
 use std::io::{Read, Write};
 mod resp;
+use anyhow::{anyhow, bail, Context};
 use resp::{Msg, Msg::*};
 
 const DEFAULT_ADDR: &str = "127.0.0.1:6379";
 
-fn handle_msg(msg: &Msg) -> Msg {
-    todo!("handle msg: {msg:?}")
+fn handle_msg(msg: &Msg) -> anyhow::Result<Msg> {
+    let (cmd, args) = msg
+        .as_array()?
+        .split_first().ok_or(anyhow!("empty command list"))?;
+    let cmd = cmd.as_bulk_string()?;
+
+    match cmd {
+        "ping" => {
+            if args.len() > 1 {
+                bail!("expected 0 or 1 args to PING, got {}", args.len())
+            }
+            match args.get(0) {
+                None => Ok(SimpleString("PONG".to_string())),
+                Some(arg) => arg
+                    .as_bulk_string()
+                    .context("first argument to PING")
+                    .map(|s| BulkString(s.to_string()))
+            }
+        }
+
+        _ => bail!("unknown command {}", cmd)
+    }
 }
 
 fn handle_conn(conn: TcpStream) {
@@ -31,7 +52,16 @@ fn handle_conn(conn: TcpStream) {
 
             Ok(msg) => {
                 println!("[*] {peer} --> {msg:?}");
-                let response = handle_msg(&msg);
+
+                let response = match handle_msg(&msg) {
+                    Ok(m) => m,
+
+                    Err(e) => {
+                        println!("[*] Invalid cmd {msg:?}: {e}");
+                        Null
+                    }
+                };
+
                 let write_ok = conn_writer.write_all(& response.encode()).is_ok();
                 println!(
                     "[{}] {peer} <-- {response:?}{}",

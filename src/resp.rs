@@ -82,9 +82,18 @@ fn take_till_crlf<I>(bytes: &mut I) -> anyhow::Result<String>
 
 impl Msg {
     pub fn encode(&self) -> Vec<u8> {
+        let crlf = b"\r\n";
         match self {
             SimpleString(s) => {
-                vec![b"+", s.as_bytes(), b"\r\n"].concat()
+                vec![b"+".as_ref(), s.as_bytes(), crlf].concat()
+            }
+
+            BulkString(s) => {
+                vec![
+                    b"$".as_ref(),
+                    s.len().to_string().as_bytes(), crlf,
+                    s.as_bytes(), crlf
+                ].concat()
             }
 
             _ => todo!("encode for {:?}", self)
