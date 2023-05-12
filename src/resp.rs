@@ -96,6 +96,10 @@ impl Msg {
                 ].concat()
             }
 
+            Error(s) => {
+                vec![b"-".as_ref(), s.as_bytes(), CRLF].concat()
+            }
+
             _ => todo!("encode for {:?}", self)
         }
     }
