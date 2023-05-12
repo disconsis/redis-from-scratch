@@ -18,6 +18,49 @@ pub enum Msg {
     Null,
 }
 
+impl Msg {
+    pub fn type_name(&self) -> &'static str {
+        match self {
+            SimpleString(_) => "simple string",
+            BulkString(_) => "bulk string",
+            Error(_) => "error",
+            Integer(_) => "integer",
+            Array(_) => "array",
+            Null => "null",
+        }
+    }
+
+    pub fn as_simple_string(&self) -> anyhow::Result<&str> {
+        match self { SimpleString(s) => Ok(s),
+                     _ => bail!("expected simple string instead of {}", self.type_name()) }
+    }
+
+    pub fn as_bulk_string(&self) -> anyhow::Result<&str> {
+        match self { BulkString(s) => Ok(s),
+                     _ => bail!("expected bulk string instead of {}", self.type_name()) }
+    }
+
+    pub fn as_error(&self) -> anyhow::Result<&str> {
+        match self { Error(s) => Ok(s),
+                     _ => bail!("expected error instead of {}", self.type_name()) }
+    }
+
+    pub fn as_integer(&self) -> anyhow::Result<&i64> {
+        match self { Integer(i) => Ok(i),
+                     _ => bail!("expected integer instead of {}", self.type_name()) }
+    }
+
+    pub fn as_array(&self) -> anyhow::Result<&[Msg]> {
+        match self { Array(msgs) => Ok(msgs),
+                     _ => bail!("expected array instead of {}", self.type_name()) }
+    }
+
+    pub fn as_null(&self) -> anyhow::Result<&Self> {
+        match self { Null => Ok(self),
+                     _ => bail!("expected null instead of {}", self.type_name()) }
+    }
+}
+
 use Msg::*;
 use anyhow::bail;
 
