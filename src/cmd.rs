@@ -4,6 +4,7 @@ use crate::resp::{Msg, Msg::*};
 #[derive(Debug)]
 pub enum Cmd<'a> {
     Ping(Option<&'a str>),
+    Echo(&'a str),
 }
 
 use Cmd::*;
@@ -14,8 +15,8 @@ impl<'a> Cmd<'a> {
             .as_array()?
             .split_first().ok_or(anyhow!("empty command list"))?;
         let cmd = cmd.as_bulk_string()?;
-        match cmd {
-            "ping" => {
+        match cmd.to_uppercase().as_str() {
+            "PING" => {
                 if args.len() > 1 {
                     bail!("expected 0 or 1 args to PING, got {}", args.len())
                 }
@@ -28,6 +29,17 @@ impl<'a> Cmd<'a> {
                 }
             }
 
+            "ECHO" => {
+                if args.len() != 1 {
+                    bail!("expected 1 arg to ECHO, got {}", args.len())
+                }
+                args.first()
+                    .unwrap()
+                    .as_bulk_string()
+                    .context("first argument to ECHO")
+                    .map(Echo)
+            }
+
             _ => bail!("unknown command {}", cmd)
         }
     }
@@ -36,6 +48,8 @@ impl<'a> Cmd<'a> {
         match self {
             Ping(None) => SimpleString("PONG".to_string()),
             Ping(Some(s)) => BulkString(s.to_string()),
+
+            Echo(msg) => BulkString(msg.to_string()),
         }
     }
 }
