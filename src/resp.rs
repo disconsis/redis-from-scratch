@@ -69,12 +69,18 @@ impl Msg {
                     .and_then(|s| s.parse::<i8>().map_err(Into::into))?;
                 if len < 0 { return Ok(Null) };
 
-                str::from_utf8(
+                let result = str::from_utf8(
                     & bytes
                         .take(len as usize)
                         .collect::<Vec<u8>>()
                 ).map(|s| BulkString(String::from(s)))
-                 .map_err(Into::into)
+                 .map_err(Into::into);
+
+                let end_bytes = bytes.take(2).collect::<Vec<u8>>();
+                if end_bytes != b"\r\n" {
+                    bail!("erroneous end bytes {:?} instead of '\\r\\n'", end_bytes)
+                }
+                result
             }
 
             // error
@@ -103,7 +109,7 @@ impl Msg {
                 Ok(Array(parts))
             }
 
-            _ => bail!("unexpected first byte '{}' in RESP encoding", first_byte)
+            _ => bail!("unexpected first byte {:?} in RESP encoding", first_byte as char)
         }
     }
 

@@ -19,7 +19,9 @@ fn handle_conn(conn: TcpStream) {
     let conn_reader = conn;
     let mut conn_writer = conn_reader.try_clone().expect("cloning tcp stream for writing");
 
-    for msg in Msg::decoder(conn_reader.bytes()
+    for msg in Msg::decoder(conn_reader
+                            .bytes()
+                            // .inspect(|x| {if let Ok(c) = *x { println!("CHAR: {:?}", c as char) }})
                             .filter_map(|i| i.ok()))
     {
         match msg {
