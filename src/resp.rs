@@ -1,4 +1,5 @@
 use std::str;
+use anyhow::bail;
 
 /// REdis Serialization Protocol (RESP) specification
 
@@ -62,7 +63,6 @@ impl Msg {
 }
 
 use Msg::*;
-use anyhow::bail;
 
 /// read from the iterator till (and including) the next
 /// CRLF, returning string preceding it
@@ -79,20 +79,20 @@ fn take_till_crlf<I>(bytes: &mut I) -> anyhow::Result<String>
     content.map_err(Into::into)
 }
 
+const CRLF: &[u8] = b"\r\n";
 
 impl Msg {
     pub fn encode(&self) -> Vec<u8> {
-        let crlf = b"\r\n";
         match self {
             SimpleString(s) => {
-                vec![b"+".as_ref(), s.as_bytes(), crlf].concat()
+                vec![b"+".as_ref(), s.as_bytes(), CRLF].concat()
             }
 
             BulkString(s) => {
                 vec![
                     b"$".as_ref(),
-                    s.len().to_string().as_bytes(), crlf,
-                    s.as_bytes(), crlf
+                    s.len().to_string().as_bytes(), CRLF,
+                    s.as_bytes(), CRLF
                 ].concat()
             }
 
@@ -129,7 +129,7 @@ impl Msg {
                  .map_err(Into::into);
 
                 let end_bytes = bytes.take(2).collect::<Vec<u8>>();
-                if end_bytes != b"\r\n" {
+                if end_bytes != CRLF {
                     bail!("erroneous end bytes {:?} instead of '\\r\\n'", end_bytes)
                 }
                 result
