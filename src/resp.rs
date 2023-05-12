@@ -100,6 +100,10 @@ impl Msg {
                 vec![b"-".as_ref(), s.as_bytes(), CRLF].concat()
             }
 
+            Integer(i) => {
+                vec![b":".as_ref(), i.to_string().as_bytes(), CRLF].concat()
+            }
+
             _ => todo!("encode for {:?}", self)
         }
     }
