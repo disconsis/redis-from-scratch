@@ -104,7 +104,18 @@ impl Msg {
                 vec![b":".as_ref(), i.to_string().as_bytes(), CRLF].concat()
             }
 
-            _ => todo!("encode for {:?}", self)
+            Array(msgs) => {
+                vec![
+                    b"*".as_ref(), msgs.len().to_string().as_bytes(), CRLF,
+                    msgs.iter().flat_map(Msg::encode).collect::<Vec<_>>().as_slice()
+                ].concat()
+            }
+
+            // two encodings are possible here - array and bulk string - but
+            // the bulk string representation is preferred
+            Null => {
+                b"$-1\r\n".to_vec()
+            }
         }
     }
 
